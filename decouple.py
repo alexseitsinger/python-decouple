@@ -221,8 +221,8 @@ class CustomConfig(AutoConfig):
     """
 
     def __init__(self, supported, *args, **kwargs):
-        self.SUPPORTED = supported
         super().__init__(*args, **kwargs)
+        self.SUPPORTED = supported
 
 
 # A pré-instantiated AutoConfig to improve decouple's usability
