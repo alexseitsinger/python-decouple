@@ -10,9 +10,11 @@ PY3 = sys.version_info[0] == 3
 
 if PY3:
     from configparser import ConfigParser
+
     text_type = str
 else:
     from ConfigParser import SafeConfigParser as ConfigParser
+
     text_type = unicode
 
 
@@ -24,6 +26,7 @@ class Undefined(object):
     """
     Class to represent undefined type.
     """
+
     pass
 
 
@@ -35,8 +38,18 @@ class Config(object):
     """
     Handle .env file format used by Foreman.
     """
-    _BOOLEANS = {'1': True, 'yes': True, 'true': True, 'on': True,
-                 '0': False, 'no': False, 'false': False, 'off': False, '': False}
+
+    _BOOLEANS = {
+        "1": True,
+        "yes": True,
+        "true": True,
+        "on": True,
+        "0": False,
+        "no": False,
+        "false": False,
+        "off": False,
+        "": False,
+    }
 
     def __init__(self, repository):
         self.repository = repository
@@ -47,7 +60,7 @@ class Config(object):
         """
         value = str(value)
         if value.lower() not in self._BOOLEANS:
-            raise ValueError('Not a boolean: %s' % value)
+            raise ValueError("Not a boolean: %s" % value)
 
         return self._BOOLEANS[value.lower()]
 
@@ -67,7 +80,11 @@ class Config(object):
             value = self.repository[option]
         else:
             if isinstance(default, Undefined):
-                raise UndefinedValueError('{} not found. Declare it as envvar or define a default value.'.format(option))
+                raise UndefinedValueError(
+                    "{} not found. Declare it as envvar or define a default value.".format(
+                        option
+                    )
+                )
 
             value = default
 
@@ -86,7 +103,7 @@ class Config(object):
 
 
 class RepositoryEmpty(object):
-    def __init__(self, source=''):
+    def __init__(self, source=""):
         pass
 
     def __contains__(self, key):
@@ -100,7 +117,8 @@ class RepositoryIni(RepositoryEmpty):
     """
     Retrieves option keys from .ini files.
     """
-    SECTION = 'settings'
+
+    SECTION = "settings"
 
     def __init__(self, source):
         self.parser = ConfigParser()
@@ -108,8 +126,7 @@ class RepositoryIni(RepositoryEmpty):
             self.parser.readfp(file_)
 
     def __contains__(self, key):
-        return (key in os.environ or
-                self.parser.has_option(self.SECTION, key))
+        return key in os.environ or self.parser.has_option(self.SECTION, key)
 
     def __getitem__(self, key):
         return self.parser.get(self.SECTION, key)
@@ -119,17 +136,18 @@ class RepositoryEnv(RepositoryEmpty):
     """
     Retrieves option keys from .env files with fall back to os.environ.
     """
+
     def __init__(self, source):
         self.data = {}
 
         with open(source) as file_:
             for line in file_:
                 line = line.strip()
-                if not line or line.startswith('#') or '=' not in line:
+                if not line or line.startswith("#") or "=" not in line:
                     continue
-                k, v = line.split('=', 1)
+                k, v = line.split("=", 1)
                 k = k.strip()
-                v = v.strip().strip('\'"')
+                v = v.strip().strip("'\"")
                 self.data[k] = v
 
     def __contains__(self, key):
@@ -150,10 +168,8 @@ class AutoConfig(object):
         caller's path.
 
     """
-    SUPPORTED = {
-        'settings.ini': RepositoryIni,
-        '.env': RepositoryEnv,
-    }
+
+    SUPPORTED = {"settings.ini": RepositoryIni, ".env": RepositoryEnv}
 
     def __init__(self, search_path=None):
         self.search_path = search_path
@@ -172,14 +188,14 @@ class AutoConfig(object):
             return self._find_file(parent)
 
         # reached root without finding any files.
-        return ''
+        return ""
 
     def _load(self, path):
         # Avoid unintended permission errors
         try:
             filename = self._find_file(os.path.abspath(path))
         except Exception:
-            filename = ''
+            filename = ""
         Repository = self.SUPPORTED.get(os.path.basename(filename), RepositoryEmpty)
 
         self.config = Config(Repository(filename))
@@ -197,6 +213,18 @@ class AutoConfig(object):
         return self.config(*args, **kwargs)
 
 
+class CustomConfig(AutoConfig):
+    """
+    config = CustomConfig({
+        ".env.development": RespositoryEnv,
+    })
+    """
+
+    def __init__(self, supported, *args, **kwargs):
+        self.SUPPORTED = supported
+        super().__init__(*args, **kwargs)
+
+
 # A pré-instantiated AutoConfig to improve decouple's usability
 # now just import config and start using with no configuration.
 config = AutoConfig()
@@ -204,12 +232,15 @@ config = AutoConfig()
 
 # Helpers
 
+
 class Csv(object):
     """
     Produces a csv parser that return a list of transformed elements.
     """
 
-    def __init__(self, cast=text_type, delimiter=',', strip=string.whitespace, post_process=list):
+    def __init__(
+        self, cast=text_type, delimiter=",", strip=string.whitespace, post_process=list
+    ):
         """
         Parameters:
         cast -- callable that transforms the item just before it's added to the list.
